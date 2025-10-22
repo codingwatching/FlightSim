@@ -42,12 +42,10 @@ public class AutopilotController : MonoBehaviour {
     PIDController glideSlopeController;
     [SerializeField]
     PIDController crossTrackController;
-    [SerializeField]
-    TakeoffModeState takeoffMode;
-    [SerializeField]
-    NavigateModeState navigateMode;
-    [SerializeField]
-    LandingModeState landingMode;
+
+    public TakeoffModeState takeoffMode;
+    public NavigateModeState navigateMode;
+    public LandingModeState landingMode;
 
     float internalHeading;
     float internalFlightPath;

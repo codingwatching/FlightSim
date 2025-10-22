@@ -14,16 +14,23 @@ public class AutopilotHUD : MonoBehaviour {
     [SerializeField]
     float updateInterval;
 
+    [SerializeField]
+    AutopilotInput takeoffRotationInput;
+
     StringBuilder builder;
 
     void Start() {
         builder = new StringBuilder();
+
+        InitInputs();
     }
 
     void Update() {
         builder.Clear();
         autopilot.WriteDebugString(builder);
         infoText.text = builder.ToString();
+
+        UpdateInputs();
     }
 
     public void OnSwitchTakeoff() {
@@ -36,5 +43,13 @@ public class AutopilotHUD : MonoBehaviour {
 
     public void OnSwitchLanding() {
         autopilot.EnterLandingMode();
+    }
+
+    void InitInputs() {
+        takeoffRotationInput.SetValue(autopilot.takeoffMode.rotationSpeedKts);
+    }
+
+    void UpdateInputs() {
+
     }
 }
