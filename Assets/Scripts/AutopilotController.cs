@@ -69,6 +69,7 @@ public class AutopilotController : MonoBehaviour {
     [Serializable]
     public class TakeoffModeState {
         public enum TakeoffState {
+            Idle,
             StartTakeoff,
             Rotate,
             FinishTakeoff
@@ -361,7 +362,7 @@ public class AutopilotController : MonoBehaviour {
         if (!plane.Grounded) return;
 
         state = AutopilotState.Takeoff;
-        takeoffMode.state = TakeoffModeState.TakeoffState.StartTakeoff;
+        takeoffMode.state = TakeoffModeState.TakeoffState.Idle;
         takeoffMode.runwayAltitude = plane.Rigidbody.position.y * Units.metersToFeet;
     }
 
@@ -394,6 +395,13 @@ public class AutopilotController : MonoBehaviour {
 
     void ResetLanding() {
         landingMode.selectedRunway = null;
+    }
+
+    public void StartTakeoff() {
+        if (state != AutopilotState.Takeoff) return;
+        if (takeoffMode.state != TakeoffModeState.TakeoffState.Idle) return;
+
+        takeoffMode.state = TakeoffModeState.TakeoffState.StartTakeoff;
     }
 
     public void SetPitchControlMode(NavigateModeState.PitchControlMode mode) {

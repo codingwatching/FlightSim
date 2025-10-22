@@ -14,6 +14,13 @@ public class AutopilotHUD : MonoBehaviour {
     [SerializeField]
     float updateInterval;
 
+    [SerializeField]
+    GameObject takeoffModeInfo;
+    [SerializeField]
+    GameObject navigateModeInfo;
+    [SerializeField]
+    GameObject landingModeInfo;
+
     [Header("Takeoff")]
     [SerializeField]
     AutopilotInput takeoffRotationSpeedInput;
@@ -42,16 +49,34 @@ public class AutopilotHUD : MonoBehaviour {
         UpdateInputs();
     }
 
+    void ShowPanel(GameObject panel, bool value) {
+        if (panel == null) return;
+        panel.SetActive(value);
+    }
+
     public void OnSwitchTakeoff() {
+        ShowPanel(takeoffModeInfo, true);
+        ShowPanel(navigateModeInfo, false);
+        ShowPanel(landingModeInfo, false);
         autopilot.EnterTakeoffMode();
     }
 
     public void OnSwitchNavigate() {
+        ShowPanel(takeoffModeInfo, false);
+        ShowPanel(navigateModeInfo, true);
+        ShowPanel(landingModeInfo, false);
         autopilot.EnterNavigateMode();
     }
 
     public void OnSwitchLanding() {
+        ShowPanel(takeoffModeInfo, false);
+        ShowPanel(navigateModeInfo, false);
+        ShowPanel(landingModeInfo, true);
         autopilot.EnterLandingMode();
+    }
+
+    public void StartTakeoff() {
+        autopilot.StartTakeoff();
     }
 
     void InitInputs() {
