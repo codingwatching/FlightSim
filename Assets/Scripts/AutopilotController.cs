@@ -484,12 +484,10 @@ public class AutopilotController : MonoBehaviour {
     void HandleStartTakeoff(float dt) {
         plane.SetThrottleInput(1);
 
-        var pitch = plane.PitchYawRoll.x;
         var roll = plane.PitchYawRoll.z;
-        var pitchRate = GetPitchRate(plane);
         var rollRate = GetRollRate(plane);
 
-        var pitchInput = pitchHoldController.Update(dt, pitch, takeoffMode.rotationAngle, pitchRate);
+        var pitchInput = 0;
         var rollInput = rollController.Update(dt, roll, 0, rollRate);
 
         var steering = new Vector3(pitchInput, 0, rollInput);

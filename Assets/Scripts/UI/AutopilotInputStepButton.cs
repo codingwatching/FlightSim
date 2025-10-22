@@ -14,7 +14,7 @@ public class AutopilotInputStepButton : MonoBehaviour {
 
     public void Bind(float value) {
         this.value = value;
-        label.text = string.Format("{0}", value);
+        label.text = value.ToString("+#;-#;+0");
     }
 
     public void OnButtonClicked() {

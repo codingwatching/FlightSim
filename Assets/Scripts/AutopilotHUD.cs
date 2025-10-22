@@ -14,8 +14,17 @@ public class AutopilotHUD : MonoBehaviour {
     [SerializeField]
     float updateInterval;
 
+    [Header("Takeoff")]
     [SerializeField]
-    AutopilotInput takeoffRotationInput;
+    AutopilotInput takeoffRotationSpeedInput;
+    [SerializeField]
+    AutopilotInput takeoffAngleInput;
+    [SerializeField]
+    AutopilotInput takeoffTargetSpeedInput;
+    [SerializeField]
+    AutopilotInput takeoffTargetAltitudeInput;
+    [SerializeField]
+    AutopilotInput takeoffClimbRateInput;
 
     StringBuilder builder;
 
@@ -46,7 +55,31 @@ public class AutopilotHUD : MonoBehaviour {
     }
 
     void InitInputs() {
-        takeoffRotationInput.SetValue(autopilot.takeoffMode.rotationSpeedKts);
+        takeoffRotationSpeedInput.SetValue(autopilot.takeoffMode.rotationSpeedKts);
+        takeoffAngleInput.SetValue(autopilot.takeoffMode.rotationAngle);
+        takeoffTargetSpeedInput.SetValue(autopilot.takeoffMode.takeoffTargetSpeedKts);
+        takeoffTargetAltitudeInput.SetValue(autopilot.takeoffMode.finishTakeoffMinFtAGL);
+        takeoffClimbRateInput.SetValue(autopilot.takeoffMode.finishTakeoffClimbRateFtPerMin);
+
+        takeoffRotationSpeedInput.OnValueChanged += (float value) => {
+            autopilot.takeoffMode.rotationSpeedKts = value;
+        };
+
+        takeoffAngleInput.OnValueChanged += (float value) => {
+            autopilot.takeoffMode.rotationAngle = value;
+        };
+
+        takeoffTargetSpeedInput.OnValueChanged += (float value) => {
+            autopilot.takeoffMode.takeoffTargetSpeedKts = value;
+        };
+
+        takeoffTargetAltitudeInput.OnValueChanged += (float value) => {
+            autopilot.takeoffMode.finishTakeoffMinFtAGL = value;
+        };
+
+        takeoffClimbRateInput.OnValueChanged += (float value) => {
+            autopilot.takeoffMode.finishTakeoffClimbRateFtPerMin = value;
+        };
     }
 
     void UpdateInputs() {

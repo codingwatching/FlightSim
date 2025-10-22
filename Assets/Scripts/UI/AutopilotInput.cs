@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -23,14 +24,18 @@ public class AutopilotInput : MonoBehaviour {
     bool showDefaultButton;
     [SerializeField]
     AutopilotInputStepButton defaultButton;
-    [SerializeField]
-    UnityEvent<float> onValueChanged;
 
     public float Value { get; private set; }
+    public event Action<float> OnValueChanged = delegate { };
 
     void Start() {
         Value = defaultValue;
         AssignStepButtons();
+
+        if (showDefaultButton) {
+            defaultButton.Bind(defaultValue);
+            defaultButton.OnClicked += OnDefaultClicked;
+        }
     }
 
     void OnDestroy() {
@@ -38,6 +43,10 @@ public class AutopilotInput : MonoBehaviour {
             AutopilotInputStepButton button = stepButtons[i];
 
             button.OnClicked -= OnStepClicked;
+        }
+
+        if (showDefaultButton) {
+            defaultButton.OnClicked -= OnDefaultClicked;
         }
     }
 
@@ -56,8 +65,12 @@ public class AutopilotInput : MonoBehaviour {
         }
     }
 
-    public void OnStepClicked(float step) {
+    void OnStepClicked(float step) {
         UpdateValue(Value + step);
+    }
+
+    void OnDefaultClicked(float value) {
+        UpdateValue(value);
     }
 
     public void OnTextInput(string textValue) {
@@ -85,6 +98,6 @@ public class AutopilotInput : MonoBehaviour {
 
     void UpdateValue(float newValue) {
         SetNewValue(newValue);
-        onValueChanged.Invoke(Value);
+        OnValueChanged(Value);
     }
 }
