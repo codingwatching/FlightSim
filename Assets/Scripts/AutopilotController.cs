@@ -5,7 +5,7 @@ using System.Text;
 using UnityEngine;
 
 public class AutopilotController : MonoBehaviour {
-    public enum AutopilotState {
+    public enum AutopilotMode {
         Idle,
         Takeoff,
         Landing,
@@ -15,7 +15,7 @@ public class AutopilotController : MonoBehaviour {
     [SerializeField]
     Plane plane;
     [SerializeField]
-    AutopilotState state;
+    AutopilotMode mode;
     [SerializeField]
     float deadzone;
     [SerializeField]
@@ -156,11 +156,13 @@ public class AutopilotController : MonoBehaviour {
         public float abortTouchdownMaxAngle;
     }
 
-    public AutopilotState State {
+    public AutopilotMode State {
         get {
-            return state;
+            return mode;
         }
     }
+
+    public event Action<AutopilotMode> OnModeChanged = delegate { };
 
     void Start() {
 
@@ -170,16 +172,16 @@ public class AutopilotController : MonoBehaviour {
         float dt = Time.fixedDeltaTime;
         UpdatePlaneData(dt);
 
-        switch (state) {
-            case AutopilotState.Idle:
+        switch (mode) {
+            case AutopilotMode.Idle:
                 break;
-            case AutopilotState.Takeoff:
+            case AutopilotMode.Takeoff:
                 HandleTakeoff(dt);
                 break;
-            case AutopilotState.Landing:
+            case AutopilotMode.Landing:
                 HandleLanding(dt);
                 break;
-            case AutopilotState.Navigate:
+            case AutopilotMode.Navigate:
                 HandleNavigate(dt);
                 break;
         }
@@ -218,7 +220,7 @@ public class AutopilotController : MonoBehaviour {
     }
 
     public void WriteDebugString(StringBuilder builder) {
-        builder.AppendLine(string.Format("Mode: {0}", state));
+        builder.AppendLine(string.Format("Mode: {0}", mode));
 
         float pitch = plane.PitchYawRoll.x;
         builder.AppendLine(string.Format("Pitch: {0:N1}", pitch));
@@ -233,14 +235,14 @@ public class AutopilotController : MonoBehaviour {
         builder.AppendLine(string.Format("Climb rate: {0} fpm", (int)Mathf.Round(climbRate)));
         builder.AppendLine(string.Format("Heading: {0:N0}", internalHeading));
 
-        if (state == AutopilotState.Navigate) {
+        if (mode == AutopilotMode.Navigate) {
             builder.AppendLine(string.Format("Pitch target: {0:N1}", internalTargetPitch));
             builder.AppendLine(string.Format("Roll target: {0:N1}", internalTargetRoll));
 
             if (navigateMode.pitchControlMode == NavigateModeState.PitchControlMode.AltitudeMode) {
                 builder.AppendLine(string.Format("Climb rate target: {0:N0}", internalTargetClimbRate));
             }
-        } else if (state == AutopilotState.Landing) {
+        } else if (mode == AutopilotMode.Landing) {
             builder.AppendLine(string.Format("Landing: {0}", landingMode.state));
             builder.AppendLine(string.Format("  Distance: {0:N0} m", internalLandingDistance));
             builder.AppendLine(string.Format("  Cross track error: {0:N0} m", internalLandingCrossTrack));
@@ -354,22 +356,28 @@ public class AutopilotController : MonoBehaviour {
         return yawInput;
     }
 
+    void SetMode(AutopilotMode mode) {
+        this.mode = mode;
+
+        OnModeChanged(mode);
+    }
+
     public void EnterTakeoffMode() {
-        if (state == AutopilotState.Takeoff) return;
-        if (state == AutopilotState.Landing && landingMode.state != LandingModeState.LandingState.Touchdown) {
+        if (mode == AutopilotMode.Takeoff) return;
+        if (mode == AutopilotMode.Landing && landingMode.state != LandingModeState.LandingState.Touchdown) {
             AbortLandingToTakeoff();
         }
         if (!plane.Grounded) return;
 
-        state = AutopilotState.Takeoff;
+        SetMode(AutopilotMode.Takeoff);
         takeoffMode.state = TakeoffModeState.TakeoffState.Idle;
         takeoffMode.runwayAltitude = plane.Rigidbody.position.y * Units.metersToFeet;
     }
 
     public void EnterNavigateMode() {
-        if (state == AutopilotState.Navigate) return;
+        if (mode == AutopilotMode.Navigate) return;
 
-        state = AutopilotState.Navigate;
+        SetMode(AutopilotMode.Navigate);
 
         ResetNavigation();
 
@@ -379,7 +387,7 @@ public class AutopilotController : MonoBehaviour {
     }
 
     public void EnterLandingMode() {
-        if (state == AutopilotState.Landing) return;
+        if (mode == AutopilotMode.Landing) return;
 
         TryLandingCapture();
     }
@@ -398,7 +406,7 @@ public class AutopilotController : MonoBehaviour {
     }
 
     public void StartTakeoff() {
-        if (state != AutopilotState.Takeoff) return;
+        if (mode != AutopilotMode.Takeoff) return;
         if (takeoffMode.state != TakeoffModeState.TakeoffState.Idle) return;
 
         takeoffMode.state = TakeoffModeState.TakeoffState.StartTakeoff;
@@ -450,6 +458,8 @@ public class AutopilotController : MonoBehaviour {
 
         if (mode == NavigateModeState.PitchControlMode.FlightPathMode) {
             var headingError = internalHeading - navigateMode.targetHeading;
+            headingError = ((headingError % 360f) + 360f) % 360f;
+            headingError = Utilities.MapAngleTo180(headingError);
             var pitchInput = CalculatePitchFlightPath(dt, internalFlightPath, navigateMode.targetPitch, pitchRate, headingError);
             return pitchInput;
         } else {
@@ -570,7 +580,7 @@ public class AutopilotController : MonoBehaviour {
         }
 
         if (bestRunway != null) {
-            state = AutopilotState.Landing;
+            SetMode(AutopilotMode.Landing);
 
             var touchdownData = bestRunway.GetClosestTouchdown(planePosition);
 
@@ -687,7 +697,7 @@ public class AutopilotController : MonoBehaviour {
     }
 
     void AbortLandingToTakeoff() {
-        state = AutopilotState.Takeoff;
+        SetMode(AutopilotMode.Takeoff);
         takeoffMode.state = TakeoffModeState.TakeoffState.FinishTakeoff;
         takeoffMode.runwayAltitude = landingMode.touchdownPosition.y;
     }
@@ -793,7 +803,7 @@ public class AutopilotController : MonoBehaviour {
         SetControlInput(plane, steering);
 
         if (plane.LocalVelocity.z < 1) {
-            state = AutopilotState.Idle;
+            SetMode(AutopilotMode.Idle);
         }
     }
 }

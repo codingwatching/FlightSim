@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -33,12 +34,33 @@ public class AutopilotHUD : MonoBehaviour {
     [SerializeField]
     AutopilotInput takeoffClimbRateInput;
 
+    [Header("Navigate")]
+    [SerializeField]
+    AutopilotDropdown navigatePitchMode;
+    [SerializeField]
+    AutopilotDropdown navigateAltitudeMode;
+    [SerializeField]
+    AutopilotInput navigateTargetHeadingInput;
+    [SerializeField]
+    AutopilotInput navigateTargetPitchInput;
+    [SerializeField]
+    AutopilotInput navigateTargetSpeedInput;
+    [SerializeField]
+    AutopilotInput navigateTargetAltitudeInput;
+    [SerializeField]
+    AutopilotInput navigateClimbRateInput;
+
     StringBuilder builder;
 
     void Start() {
         builder = new StringBuilder();
+        autopilot.OnModeChanged += OnAutopilotModeChanged;
 
         InitInputs();
+    }
+
+    void OnDestroy() {
+        autopilot.OnModeChanged -= OnAutopilotModeChanged;
     }
 
     void Update() {
@@ -54,24 +76,35 @@ public class AutopilotHUD : MonoBehaviour {
         panel.SetActive(value);
     }
 
-    public void OnSwitchTakeoff() {
-        ShowPanel(takeoffModeInfo, true);
+    void OnAutopilotModeChanged(AutopilotController.AutopilotMode mode) {
+        ShowPanel(takeoffModeInfo, false);
         ShowPanel(navigateModeInfo, false);
         ShowPanel(landingModeInfo, false);
+
+        switch (mode) {
+            case AutopilotController.AutopilotMode.Idle:
+                break;
+            case AutopilotController.AutopilotMode.Takeoff:
+                ShowPanel(takeoffModeInfo, true);
+                break;
+            case AutopilotController.AutopilotMode.Navigate:
+                ShowPanel(navigateModeInfo, true);
+                break;
+            case AutopilotController.AutopilotMode.Landing:
+                ShowPanel(landingModeInfo, true);
+                break;
+        }
+    }
+
+    public void OnSwitchTakeoff() {
         autopilot.EnterTakeoffMode();
     }
 
     public void OnSwitchNavigate() {
-        ShowPanel(takeoffModeInfo, false);
-        ShowPanel(navigateModeInfo, true);
-        ShowPanel(landingModeInfo, false);
         autopilot.EnterNavigateMode();
     }
 
     public void OnSwitchLanding() {
-        ShowPanel(takeoffModeInfo, false);
-        ShowPanel(navigateModeInfo, false);
-        ShowPanel(landingModeInfo, true);
         autopilot.EnterLandingMode();
     }
 
@@ -104,6 +137,42 @@ public class AutopilotHUD : MonoBehaviour {
 
         takeoffClimbRateInput.OnValueChanged += (float value) => {
             autopilot.takeoffMode.finishTakeoffClimbRateFtPerMin = value;
+        };
+
+        navigatePitchMode.SetValue((int)autopilot.navigateMode.pitchControlMode);
+        navigateAltitudeMode.SetValue((int)autopilot.navigateMode.altitudeControlMode);
+        navigateTargetHeadingInput.SetValue(autopilot.navigateMode.targetHeading);
+        navigateTargetPitchInput.SetValue(autopilot.navigateMode.targetPitch);
+        navigateTargetSpeedInput.SetValue(autopilot.navigateMode.targetSpeedKts);
+        navigateTargetAltitudeInput.SetValue(autopilot.navigateMode.targetAltitudeFt);
+        navigateClimbRateInput.SetValue(autopilot.navigateMode.targetClimbRateFtPerMin);
+
+        navigatePitchMode.OnValueChanged += (int value) => {
+            autopilot.navigateMode.pitchControlMode = (AutopilotController.NavigateModeState.PitchControlMode)value;
+        };
+
+        navigateAltitudeMode.OnValueChanged += (int value) => {
+            autopilot.navigateMode.altitudeControlMode = (AutopilotController.NavigateModeState.AltitudeControlMode)value;
+        };
+
+        navigateTargetHeadingInput.OnValueChanged += (float value) => {
+            autopilot.navigateMode.targetHeading = value;
+        };
+
+        navigateTargetPitchInput.OnValueChanged += (float value) => {
+            autopilot.navigateMode.targetPitch = value;
+        };
+
+        navigateTargetSpeedInput.OnValueChanged += (float value) => {
+            autopilot.navigateMode.targetSpeedKts = value;
+        };
+
+        navigateTargetAltitudeInput.OnValueChanged += (float value) => {
+            autopilot.navigateMode.targetAltitudeFt = value;
+        };
+
+        navigateClimbRateInput.OnValueChanged += (float value) => {
+            autopilot.navigateMode.targetClimbRateFtPerMin = value;
         };
     }
 
