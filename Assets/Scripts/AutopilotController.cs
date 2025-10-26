@@ -96,16 +96,11 @@ public class AutopilotController : MonoBehaviour {
         public enum PitchControlMode {
             PitchMode,
             FlightPathMode,
-            AltitudeMode
-        }
-
-        public enum AltitudeControlMode {
-            AltitudeHold,
+            AltitudeHoldMode,
             ClimbRateHold
         }
 
         public PitchControlMode pitchControlMode;
-        public AltitudeControlMode altitudeControlMode;
         public float targetPitch;
         [Tooltip("Knots")]
         public float targetSpeedKts;
@@ -154,6 +149,12 @@ public class AutopilotController : MonoBehaviour {
         public float abortApproachMaxAngle;
         public float abortApproachMaxCrossTrackError;
         public float abortTouchdownMaxAngle;
+    }
+
+    public Plane Plane {
+        get {
+            return plane;
+        }
     }
 
     public AutopilotMode State {
@@ -239,7 +240,7 @@ public class AutopilotController : MonoBehaviour {
             builder.AppendLine(string.Format("Pitch target: {0:N1}", internalTargetPitch));
             builder.AppendLine(string.Format("Roll target: {0:N1}", internalTargetRoll));
 
-            if (navigateMode.pitchControlMode == NavigateModeState.PitchControlMode.AltitudeMode) {
+            if (navigateMode.pitchControlMode == NavigateModeState.PitchControlMode.AltitudeHoldMode) {
                 builder.AppendLine(string.Format("Climb rate target: {0:N0}", internalTargetClimbRate));
             }
         } else if (mode == AutopilotMode.Landing) {
@@ -394,7 +395,6 @@ public class AutopilotController : MonoBehaviour {
 
     public void ResetNavigation() {
         SetPitchControlMode(NavigateModeState.PitchControlMode.FlightPathMode);
-        SetAltitudeControlMode(NavigateModeState.AltitudeControlMode.AltitudeHold);
 
         navigateMode.targetAltitudeFt = plane.Rigidbody.position.y * Units.metersToFeet;
         navigateMode.targetHeading = plane.PitchYawRoll.y;
@@ -420,14 +420,6 @@ public class AutopilotController : MonoBehaviour {
         climbRateController.Reset();
     }
 
-    public void SetAltitudeControlMode(NavigateModeState.AltitudeControlMode mode) {
-        if (navigateMode.altitudeControlMode == mode) return;
-
-        navigateMode.altitudeControlMode = mode;
-        pitchHoldController.Reset();
-        climbRateController.Reset();
-    }
-
     void HandleNavigate(float dt) {
         SetThrottleSpeedHold(dt, navigateMode.targetSpeedKts);
 
@@ -446,7 +438,8 @@ public class AutopilotController : MonoBehaviour {
             case NavigateModeState.PitchControlMode.PitchMode:
             case NavigateModeState.PitchControlMode.FlightPathMode:
                 return HandleNavigateFlightPathMode(dt, navigateMode.pitchControlMode);
-            case NavigateModeState.PitchControlMode.AltitudeMode:
+            case NavigateModeState.PitchControlMode.AltitudeHoldMode:
+            case NavigateModeState.PitchControlMode.ClimbRateHold:
                 return HandleNavigateAltitudeMode(dt);
         }
 
@@ -472,7 +465,7 @@ public class AutopilotController : MonoBehaviour {
     float HandleNavigateAltitudeMode(float dt) {
         var climbRate = navigateMode.targetClimbRateFtPerMin;
 
-        if (navigateMode.altitudeControlMode == NavigateModeState.AltitudeControlMode.AltitudeHold) {
+        if (navigateMode.pitchControlMode == NavigateModeState.PitchControlMode.AltitudeHoldMode) {
             // convert m to ft, m/s to ft/min
             var altitudeFt = plane.Rigidbody.position.y * Units.metersToFeet;
             var verticalSpeedFt = plane.Rigidbody.velocity.y * Units.metersToFeet * 60;

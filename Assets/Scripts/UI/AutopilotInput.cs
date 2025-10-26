@@ -28,7 +28,7 @@ public class AutopilotInput : MonoBehaviour {
     public float Value { get; private set; }
     public event Action<float> OnValueChanged = delegate { };
 
-    void Start() {
+    public void Init() {
         Value = defaultValue;
         AssignStepButtons();
 
