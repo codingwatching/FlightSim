@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.UIElements.Experimental;
 
 public class AutopilotHUD : MonoBehaviour {
     [SerializeField]
@@ -22,6 +21,10 @@ public class AutopilotHUD : MonoBehaviour {
     GameObject navigateModeInfo;
     [SerializeField]
     GameObject landingModeInfo;
+    [SerializeField]
+    GameObject landingModeError;
+    [SerializeField]
+    Text landingErrorText;
 
     [Header("Takeoff")]
     [SerializeField]
@@ -49,17 +52,29 @@ public class AutopilotHUD : MonoBehaviour {
     [SerializeField]
     AutopilotInput navigateClimbRateInput;
 
+    [Header("Landing")]
+    [SerializeField]
+    AutopilotInput landingSpeedInput;
+    [SerializeField]
+    AutopilotInput landingGlideSlopeInput;
+    [SerializeField]
+    AutopilotInput landingDescentRateInput;
+    [SerializeField]
+    AutopilotInput landingFlareAltitudeInput;
+
     StringBuilder builder;
 
     void Start() {
         builder = new StringBuilder();
         autopilot.OnModeChanged += OnAutopilotModeChanged;
+        autopilot.OnLandingCaptureFailed += OnAutopilotLandingCaptureFailed;
 
         InitInputs();
     }
 
     void OnDestroy() {
         autopilot.OnModeChanged -= OnAutopilotModeChanged;
+        autopilot.OnLandingCaptureFailed -= OnAutopilotLandingCaptureFailed;
     }
 
     void Update() {
@@ -79,6 +94,7 @@ public class AutopilotHUD : MonoBehaviour {
         ShowPanel(takeoffModeInfo, false);
         ShowPanel(navigateModeInfo, false);
         ShowPanel(landingModeInfo, false);
+        ShowPanel(landingModeError, false);
 
         switch (mode) {
             case AutopilotController.AutopilotMode.Idle:
@@ -98,6 +114,32 @@ public class AutopilotHUD : MonoBehaviour {
         }
     }
 
+    void OnAutopilotLandingCaptureFailed(AutopilotController.CaptureResult result) {
+        builder.Clear();
+        builder.AppendFormat("Capture failed: {0}\n", result.failReason);
+
+        switch (result.failReason) {
+            case AutopilotController.LandingModeState.LandingCaptureFailure.NoRunwaysError:
+                builder.Append("No runways found");
+                break;
+            case AutopilotController.LandingModeState.LandingCaptureFailure.AltitudeError:
+                builder.AppendFormat("Below runway. Altitude: {0} ft    Min: {1} ft", result.failValue, result.failMinValue);
+                break;
+            case AutopilotController.LandingModeState.LandingCaptureFailure.DistanceError:
+                builder.AppendFormat("Distance: {0} ft    Min: {1} ft    Max: {2} ft", result.failValue, result.failMinValue, result.failMaxValue);
+                break;
+            case AutopilotController.LandingModeState.LandingCaptureFailure.AngleError:
+                builder.AppendFormat("Angle: {0} ft    Min: {1}    Max: {2}", result.failValue, result.failMinValue, result.failMaxValue);
+                break;
+            case AutopilotController.LandingModeState.LandingCaptureFailure.GlideSlopeError:
+                builder.AppendFormat("Glide slope: {0} ft    Min: {1}    Max: {2}", result.failValue, result.failMinValue, result.failMaxValue);
+                break;
+        }
+
+        landingErrorText.text = builder.ToString();
+        ShowPanel(landingModeError, true);
+    }
+
     public void OnSwitchTakeoff() {
         autopilot.EnterTakeoffMode();
     }
@@ -114,6 +156,11 @@ public class AutopilotHUD : MonoBehaviour {
         autopilot.StartTakeoff();
     }
 
+    public void StartLanding() {
+        ShowPanel(landingModeError, false);
+        autopilot.TryLandingCapture();
+    }
+
     void InitInputs() {
         takeoffRotationSpeedInput.Init();
         takeoffAngleInput.Init();
@@ -127,6 +174,11 @@ public class AutopilotHUD : MonoBehaviour {
         navigateTargetSpeedInput.Init();
         navigateTargetAltitudeInput.Init();
         navigateClimbRateInput.Init();
+
+        landingSpeedInput.Init();
+        landingGlideSlopeInput.Init();
+        landingDescentRateInput.Init();
+        landingFlareAltitudeInput.Init();
 
         InitTakeoffMode();
         InitNavigateMode();
@@ -187,18 +239,27 @@ public class AutopilotHUD : MonoBehaviour {
 
     void InitNavigateMode() {
         var heading = Mathf.Round(autopilot.Plane.PitchYawRoll.y);
+        var speed = Mathf.Round(autopilot.Plane.LocalVelocity.z * Units.metersToKnots);
 
         navigatePitchMode.SetValue((int)autopilot.navigateMode.pitchControlMode);
+
         navigateTargetHeadingInput.SetValue(heading);
         autopilot.navigateMode.targetHeading = navigateTargetHeadingInput.Value;
+
         navigateTargetPitchInput.SetValue(autopilot.navigateMode.targetPitch);
-        navigateTargetSpeedInput.SetValue(autopilot.navigateMode.targetSpeedKts);
+
+        navigateTargetSpeedInput.SetValue(speed);
+        autopilot.navigateMode.targetSpeedKts = navigateTargetSpeedInput.Value;
+
         navigateTargetAltitudeInput.SetValue(autopilot.navigateMode.targetAltitudeFt);
         navigateClimbRateInput.SetValue(autopilot.navigateMode.targetClimbRateFtPerMin);
     }
 
     void InitLandingMode() {
-
+        landingSpeedInput.SetValue(autopilot.landingMode.approachSpeedKts);
+        landingGlideSlopeInput.SetValue(autopilot.landingMode.idealGlideSlope);
+        landingDescentRateInput.SetValue(autopilot.landingMode.flareDescentStartFtPerMin);
+        landingFlareAltitudeInput.SetValue(autopilot.landingMode.flareStartAltitudeFt);
     }
 
     void UpdateInputs() {

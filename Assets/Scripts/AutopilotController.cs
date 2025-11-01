@@ -114,10 +114,20 @@ public class AutopilotController : MonoBehaviour {
     [Serializable]
     public class LandingModeState {
         public enum LandingState {
+            Idle,
             Align,
             Approach,
             Flare,
             Touchdown
+        }
+
+        public enum LandingCaptureFailure {
+            None,
+            NoRunwaysError,
+            AltitudeError,
+            DistanceError,
+            AngleError,
+            GlideSlopeError
         }
 
         public LandingState state;
@@ -151,6 +161,15 @@ public class AutopilotController : MonoBehaviour {
         public float abortTouchdownMaxAngle;
     }
 
+    public struct CaptureResult {
+        public bool valid;
+        public float distance;
+        public LandingModeState.LandingCaptureFailure failReason;
+        public float failMinValue;
+        public float failMaxValue;
+        public float failValue;
+    }
+
     public Plane Plane {
         get {
             return plane;
@@ -164,6 +183,7 @@ public class AutopilotController : MonoBehaviour {
     }
 
     public event Action<AutopilotMode> OnModeChanged = delegate { };
+    public event Action<CaptureResult> OnLandingCaptureFailed = delegate { };
 
     void Start() {
 
@@ -379,7 +399,6 @@ public class AutopilotController : MonoBehaviour {
         if (mode == AutopilotMode.Navigate) return;
 
         SetMode(AutopilotMode.Navigate);
-
         ResetNavigation();
 
         if (plane.FlapsDeployed) {
@@ -390,7 +409,9 @@ public class AutopilotController : MonoBehaviour {
     public void EnterLandingMode() {
         if (mode == AutopilotMode.Landing) return;
 
-        TryLandingCapture();
+        SetMode(AutopilotMode.Landing);
+        ResetNavigation();
+        ResetLanding();
     }
 
     public void ResetNavigation() {
@@ -402,6 +423,7 @@ public class AutopilotController : MonoBehaviour {
     }
 
     void ResetLanding() {
+        landingMode.state = LandingModeState.LandingState.Idle;
         landingMode.selectedRunway = null;
     }
 
@@ -549,7 +571,9 @@ public class AutopilotController : MonoBehaviour {
         }
     }
 
-    void TryLandingCapture() {
+    public void TryLandingCapture() {
+        if (mode != AutopilotMode.Landing) return;
+        if (landingMode.state != LandingModeState.LandingState.Idle) return;
         ResetLanding();
 
         var planePosition = plane.Rigidbody.position;
@@ -563,17 +587,29 @@ public class AutopilotController : MonoBehaviour {
         Runway bestRunway = null;
         float bestDistance = float.PositiveInfinity;
 
+        CaptureResult failResult = new CaptureResult();
+        failResult.failReason = LandingModeState.LandingCaptureFailure.NoRunwaysError;
+        float failBestDistance = float.PositiveInfinity;
+
         foreach (var runway in landingMode.runways) {
             var result = TryCapture(runway, planePosition, planeDirection);
 
-            if (result.valid && result.distance < bestDistance) {
-                bestRunway = runway;
-                bestDistance = result.distance;
+            if (result.valid) {
+                if (result.distance < bestDistance) {
+                    bestRunway = runway;
+                    bestDistance = result.distance;
+                }
+            } else {
+                if (result.distance < failBestDistance) {
+                    failResult = result;
+                    failBestDistance = result.distance;
+                }
             }
         }
 
         if (bestRunway != null) {
-            SetMode(AutopilotMode.Landing);
+            // runway found
+            landingMode.state = LandingModeState.LandingState.Align;
 
             var touchdownData = bestRunway.GetClosestTouchdown(planePosition);
 
@@ -581,12 +617,10 @@ public class AutopilotController : MonoBehaviour {
             landingMode.touchdownPosition = touchdownData.position;
             landingMode.touchdownDirection = touchdownData.direction;
             hasCrossTrackVelocity = false;
+        } else {
+            // failed to capture any runway
+            OnLandingCaptureFailed(failResult);
         }
-    }
-
-    struct CaptureResult {
-        public bool valid;
-        public float distance;
     }
 
     CaptureResult TryCapture(Runway runway, Vector3 planePosition, Vector3 planeDirection) {
@@ -594,22 +628,34 @@ public class AutopilotController : MonoBehaviour {
         var data = runway.GetClosestTouchdown(plane.Rigidbody.position);
 
         var diff = (data.position - planePosition);
+        var diff2D = diff;
+        diff2D.y = 0;
+        var dist = diff2D.magnitude;
+
+        result.distance = dist;
 
         // below runway
         if (diff.y > 0) {
+            result.failReason = LandingModeState.LandingCaptureFailure.AltitudeError;
+            result.failMinValue = data.position.y;
+            result.failValue = planePosition.y;
             return result;
         }
 
         // test horizontal distance
-        diff.y = 0;
-        var dist = diff.magnitude;
-
         if (dist < landingMode.captureMinDistance || dist > landingMode.captureMaxDistance) {
+            result.failReason = LandingModeState.LandingCaptureFailure.DistanceError;
+            result.failMinValue = landingMode.captureMinDistance;
+            result.failMaxValue = landingMode.captureMaxDistance;
+            result.failValue = dist;
             return result;
         }
 
         var angleError = Vector3.Angle(data.direction, planeDirection);
         if (angleError > landingMode.captureMaxAngle) {
+            result.failReason = LandingModeState.LandingCaptureFailure.AngleError;
+            result.failMaxValue = landingMode.captureMaxAngle;
+            result.failValue = angleError;
             return result;
         }
 
@@ -617,6 +663,10 @@ public class AutopilotController : MonoBehaviour {
         var glideSlope = CalculateGlideSlope(data.direction, predictedPath);
 
         if (glideSlope < landingMode.captureMinGlideSlope || glideSlope > landingMode.captureMaxGlideSlope) {
+            result.failReason = LandingModeState.LandingCaptureFailure.GlideSlopeError;
+            result.failMinValue = landingMode.captureMinGlideSlope;
+            result.failMaxValue = landingMode.captureMaxGlideSlope;
+            result.failValue = glideSlope;
             return result;
         }
 
@@ -638,6 +688,9 @@ public class AutopilotController : MonoBehaviour {
         UpdateLandingData(dt);
 
         switch (landingMode.state) {
+            case LandingModeState.LandingState.Idle:
+                HandleNavigate(dt);
+                break;
             case LandingModeState.LandingState.Align:
                 HandleLandingAlign(dt);
                 break;
