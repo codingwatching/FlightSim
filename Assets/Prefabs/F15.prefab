@@ -2397,7 +2397,7 @@ MonoBehaviour:
     rotationAngle: 10
     takeoffTargetSpeedKts: 250
     finishTakeoffClimbRateFtPerMin: 6000
-    finishTakeoffMinFtAGL: 2000
+    finishTakeoffMinFtAGL: 1500
     finishTakeoffMinSpeedKts: 175
     runwayAltitude: 0
   navigateMode:
