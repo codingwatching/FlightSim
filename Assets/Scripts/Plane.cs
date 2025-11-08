@@ -42,6 +42,8 @@ public class Plane : MonoBehaviour {
 
     [Header("Steering")]
     [SerializeField]
+    Vector3 centerOfMassOffset;
+    [SerializeField]
     Vector3 turnSpeed;
     [SerializeField]
     Vector3 turnAcceleration;
@@ -242,6 +244,7 @@ public class Plane : MonoBehaviour {
 
         missileLockDirection = Vector3.forward;
 
+        Rigidbody.centerOfMass = centerOfMassOffset;
         Rigidbody.velocity = Rigidbody.rotation * new Vector3(0, 0, initialSpeed);
     }
 

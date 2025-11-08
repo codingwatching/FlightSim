@@ -1365,7 +1365,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7411338550634913821}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -1.25, z: 6}
+  m_LocalPosition: {x: 0, y: -1, z: 6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1973,10 +1973,11 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  flapsLiftPower: 150
+  flapsLiftPower: 25
   flapsAOABias: 0.5
-  flapsDrag: 5
+  flapsDrag: 2.5
   flapsRetractSpeed: 125
+  centerOfMassOffset: {x: 0, y: 0, z: 0.5}
   turnSpeed: {x: 30, y: 15, z: 270}
   turnAcceleration: {x: 60, y: 30, z: 540}
   steeringCurve:
