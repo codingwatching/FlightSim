@@ -293,7 +293,7 @@ public class AutopilotController : MonoBehaviour {
         } else if (mode == AutopilotMode.Landing) {
             builder.AppendLine(string.Format("Landing: {0}", landingMode.state));
             builder.AppendLine(string.Format("  Distance: {0:N0} m", internalLandingDistance));
-            builder.AppendLine(string.Format("  Cross track error: {0:N0} m", internalLandingCrossTrack));
+            builder.AppendLine(string.Format("  Cross track error: {0:N0} m", internalLandingCrossTrack.Value));
             builder.AppendLine(string.Format("  Altitude: {0:N0} m", internalLandingAltitude));
             builder.AppendLine(string.Format("  Glide slope: {0:N1}", internalGlideSlope));
             builder.AppendLine(string.Format("  Angle: {0:N1}", internalLandingAngle));
