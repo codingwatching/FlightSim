@@ -483,16 +483,16 @@ public class AutopilotController : MonoBehaviour {
         }
         if (!plane.Grounded) return;
 
-        SetMode(AutopilotMode.Takeoff);
         takeoffMode.state = TakeoffModeState.TakeoffState.Idle;
         takeoffMode.runwayAltitude = plane.Rigidbody.position.y * Units.metersToFeet;
+        SetMode(AutopilotMode.Takeoff);
     }
 
     public void EnterNavigateMode() {
         if (mode == AutopilotMode.Navigate) return;
 
-        SetMode(AutopilotMode.Navigate);
         ResetNavigation();
+        SetMode(AutopilotMode.Navigate);
 
         if (plane.FlapsDeployed) {
             plane.ToggleFlaps();
@@ -502,9 +502,9 @@ public class AutopilotController : MonoBehaviour {
     public void EnterLandingMode() {
         if (mode == AutopilotMode.Landing) return;
 
-        SetMode(AutopilotMode.Landing);
         ResetNavigation();
         ResetLanding();
+        SetMode(AutopilotMode.Landing);
     }
 
     public void ResetNavigation() {
