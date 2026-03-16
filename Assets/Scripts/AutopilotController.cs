@@ -79,6 +79,7 @@ public class AutopilotController : MonoBehaviour {
             }
 
             value = newValue;
+            hasValue = true;
         }
 
         public void Reset() {
