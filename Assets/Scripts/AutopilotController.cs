@@ -434,10 +434,10 @@ public class AutopilotController : MonoBehaviour {
         return Mathf.Clamp(pitchInput / rollFactor, -1, 1);
     }
 
-    float CalculateGlideSlopeTarget(float dt, float glidePath, float targetGlidePath, float pitchRate) {
+    float CalculateGlideSlopeTarget(float dt, float glideSlope, float targetGlideSlope, float pitchRate) {
         // glide slope measures degrees downwards, convert to flight path which is degrees upward
-        var bias = glideSlopeController.Update(dt, glidePath, targetGlidePath, pitchRate);
-        return -targetGlidePath + bias;
+        var bias = glideSlopeController.Update(dt, glideSlope, targetGlideSlope, pitchRate);
+        return -targetGlideSlope + bias;
     }
 
     float CalculateRollBank(float dt, float targetHeading) {
@@ -739,18 +739,17 @@ public class AutopilotController : MonoBehaviour {
             return result;
         }
 
-        result.distance = dist;
         result.valid = true;
 
         return result;
     }
 
-    float CalculateGlideSlope(Vector3 runwayDirection, Vector3 planeDirection) {
+    float CalculateGlideSlope(Vector3 runwayDirection, Vector3 glideDirection) {
         Vector3 axis = Vector3.Cross(runwayDirection, Vector3.down);
         Vector3 runwayDir = Vector3.ProjectOnPlane(runwayDirection, axis);
-        Vector3 planeDir = Vector3.ProjectOnPlane(planeDirection, axis);
+        Vector3 glideDir = Vector3.ProjectOnPlane(glideDirection, axis);
 
-        return Vector3.SignedAngle(runwayDir, planeDir, axis);
+        return Vector3.SignedAngle(runwayDir, glideDir, axis);
     }
 
     void HandleLanding(float dt) {
@@ -836,6 +835,7 @@ public class AutopilotController : MonoBehaviour {
 
         var targetFlightPath = CalculateGlideSlopeTarget(dt, internalGlideSlope, landingMode.idealGlideSlope, pitchRate);
         var targetHeading = CalculateCrossTrackTarget(dt, internalLandingHeading, internalLandingCrossTrack.Value, internalLandingCrossTrack.Velocity);
+
         var pitchInput = CalculatePitchFlightPathMode(dt, internalFlightPath.Value, targetFlightPath, internalFlightPath.Velocity);
         var rollInput = CalculateRollBank(dt, targetHeading);
         var yawInput = CalculateYawSlip(dt, 0, yawRate);
