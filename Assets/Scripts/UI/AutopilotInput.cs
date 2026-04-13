@@ -33,6 +33,7 @@ public class AutopilotInput : MonoBehaviour {
         AssignStepButtons();
 
         if (showDefaultButton) {
+            defaultButton.IsDefault = true;
             defaultButton.Bind(defaultValue);
             defaultButton.OnClicked += OnDefaultClicked;
         }

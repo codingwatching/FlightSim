@@ -11,10 +11,16 @@ public class AutopilotInputStepButton : MonoBehaviour {
     float value;
 
     public event Action<float> OnClicked = delegate { };
+    public bool IsDefault { get; set; }
 
     public void Bind(float value) {
         this.value = value;
-        label.text = value.ToString("+#;-#;+0");
+
+        if (IsDefault) {
+            label.text = value.ToString();
+        } else {
+            label.text = value.ToString("+#;-#;+0");
+        }
     }
 
     public void OnButtonClicked() {
