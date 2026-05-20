@@ -346,7 +346,7 @@ public class AutopilotController : MonoBehaviour {
     /// <param name="pitch"></param>
     /// <param name="pitchRate"></param>
     /// <returns>Joystick pitch command</returns>
-    float CalculatePitchHold(float dt, float pitchTarget, float pitch, float pitchRate) {
+    float CalculateFlightPathHold(float dt, float pitchTarget, float pitch, float pitchRate) {
         var pitchInput = pitchHoldController.Update(dt, pitch, pitchTarget, pitchRate);
 
         return pitchInput;
@@ -360,7 +360,7 @@ public class AutopilotController : MonoBehaviour {
     /// <param name="pitch"></param>
     /// <param name="pitchRate"></param>
     /// <returns>Joystick pitch command</returns>
-    float CalculatePitchHoldMode(float dt, float targetPitch) {
+    float CalculatePitchHold(float dt, float targetPitch) {
         var pitch = plane.PitchYawRoll.x;
         var pitchRate = GetPitchRate(plane);
         var pitchInput = pitchHoldController.Update(dt, pitch, targetPitch, pitchRate);
@@ -380,7 +380,7 @@ public class AutopilotController : MonoBehaviour {
         var verticalAccelFt = plane.GForce.y * Units.metersToFeet * 60;
 
         var pitchTarget = climbRateController.Update(dt, verticalSpeedFt, targetClimbRate, verticalAccelFt);
-        var pitchInput = CalculatePitchHoldMode(dt, pitchTarget);
+        var pitchInput = CalculatePitchHold(dt, pitchTarget);
 
         currentTargetPitch = pitchTarget;
 
@@ -431,7 +431,7 @@ public class AutopilotController : MonoBehaviour {
         var effectiveRoll = Mathf.Clamp(plane.PitchYawRoll.z, -maxRoll, maxRoll);
         var rollFactor = Mathf.Cos(effectiveRoll * Mathf.Deg2Rad);  // should not exceed +/- 90 degrees
 
-        var pitchInput = CalculatePitchHold(dt, targetFlightPath, flightPath, flightPathVelocity);
+        var pitchInput = CalculateFlightPathHold(dt, targetFlightPath, flightPath, flightPathVelocity);
         return Mathf.Clamp(pitchInput / rollFactor, -1, 1);
     }
 
@@ -439,6 +439,14 @@ public class AutopilotController : MonoBehaviour {
         // glide slope measures degrees downwards, convert to flight path which is degrees upward
         var bias = glideSlopeController.Update(dt, glideSlope, targetGlideSlope, pitchRate);
         return -targetGlideSlope + bias;
+    }
+
+    float CalculateRollHold(float dt, float targetRoll) {
+        var roll = plane.PitchYawRoll.z;
+        var rollRate = GetRollRate(plane);
+
+        var rollInput = rollController.Update(dt, roll, targetRoll, rollRate);
+        return rollInput;
     }
 
     float CalculateRollBank(float dt, float targetHeading) {
@@ -466,7 +474,9 @@ public class AutopilotController : MonoBehaviour {
         return yawInput;
     }
 
-    float CalculateYawHeading(float dt, float heading, float targetHeading, float yawRate) {
+    float CalculateYawHeading(float dt, float heading, float targetHeading) {
+        var yawRate = GetYawRate(plane);
+
         var yawInput = yawHeadingController.Update(dt, heading, targetHeading, yawRate);
         return yawInput;
     }
@@ -554,7 +564,7 @@ public class AutopilotController : MonoBehaviour {
 
         switch (navigateMode.pitchControlMode) {
             case NavigateModeState.PitchControlMode.PitchMode:
-                pitchInput = CalculatePitchHoldMode(dt, navigateMode.targetPitch);
+                pitchInput = CalculatePitchHold(dt, navigateMode.targetPitch);
                 break;
             case NavigateModeState.PitchControlMode.FlightPathMode:
                 pitchInput = CalculatePitchFlightPathMode(dt, currentFlightPath.Value, navigateMode.targetPitch, currentFlightPath.Velocity);
@@ -587,11 +597,8 @@ public class AutopilotController : MonoBehaviour {
     void HandleStartTakeoff(float dt) {
         plane.SetThrottleInput(1);
 
-        var roll = plane.PitchYawRoll.z;
-        var rollRate = GetRollRate(plane);
-
-        var pitchInput = 0;
-        var rollInput = rollController.Update(dt, roll, 0, rollRate);
+        var pitchInput = CalculatePitchHold(dt, 0);
+        var rollInput = CalculateRollHold(dt, 0);
 
         var steering = new Vector3(pitchInput, 0, rollInput);
         SetControlInput(plane, steering);
@@ -604,13 +611,10 @@ public class AutopilotController : MonoBehaviour {
     }
 
     void HandleRotateTakeoff(float dt) {
-        var pitch = plane.PitchYawRoll.x;
-        var roll = plane.PitchYawRoll.z;
-        var pitchRate = GetPitchRate(plane);
-        var rollRate = GetRollRate(plane);
+        plane.SetThrottleInput(1);
 
-        var pitchInput = CalculatePitchHold(dt, takeoffMode.rotationAngle, pitch, pitchRate);
-        var rollInput = rollController.Update(dt, roll, 0, rollRate);
+        var pitchInput = CalculatePitchHold(dt, takeoffMode.rotationAngle);
+        var rollInput = CalculateRollHold(dt, 0);
 
         var steering = new Vector3(pitchInput, 0, rollInput);
         SetControlInput(plane, steering);
@@ -623,11 +627,8 @@ public class AutopilotController : MonoBehaviour {
     void HandleFinishTakeoff(float dt) {
         SetThrottleSpeedHold(dt, takeoffMode.takeoffTargetSpeedKts);
 
-        var roll = plane.PitchYawRoll.z;
-        var rollRate = GetRollRate(plane);
-
         var pitchInput = CalculatePitchClimbRateMode(dt, takeoffMode.finishTakeoffClimbRateFtPerMin);
-        var rollInput = rollController.Update(dt, roll, 0, rollRate);
+        var rollInput = CalculateRollHold(dt, 0);
 
         var steering = new Vector3(pitchInput, 0, rollInput);
         SetControlInput(plane, steering);
@@ -844,7 +845,7 @@ public class AutopilotController : MonoBehaviour {
             targetHeading = currentHeading;
         }
 
-        var pitchInput = CalculatePitchHold(dt, targetFlightPath, currentFlightPath.Value, currentFlightPath.Velocity);
+        var pitchInput = CalculateFlightPathHold(dt, targetFlightPath, currentFlightPath.Value, currentFlightPath.Velocity);
         var rollInput = CalculateRollBank(dt, targetHeading);
         var yawInput = CalculateYawSlip(dt, 0, yawRate);
 
@@ -890,8 +891,6 @@ public class AutopilotController : MonoBehaviour {
     void HandleLandingFlare(float dt) {
         SetThrottleSpeedHold(dt, landingMode.approachSpeedKts);
 
-        var yawRate = GetYawRate(plane);
-
         var targetHeading = CalculateCrossTrackTarget(dt, currentLandingHeading, currentLandingCrossTrack.Value, currentLandingCrossTrack.Velocity);
 
         float altitude = currentLandingAltitude * Units.metersToFeet;
@@ -899,8 +898,8 @@ public class AutopilotController : MonoBehaviour {
         float descentRate = Mathf.Lerp(landingMode.flareDescentStartFtPerMin, landingMode.flareDescentEndFtPerMin, flareT);
 
         var pitchInput = CalculatePitchClimbRateMode(dt, descentRate);
-        var rollInput = CalculateRollBank(dt, targetHeading);
-        var yawInput = CalculateYawSlip(dt, 0, yawRate);
+        var rollInput = CalculateRollHold(dt, 0);
+        var yawInput = CalculateYawHeading(dt, currentHeading, targetHeading);
 
         var steering = new Vector3(pitchInput, yawInput, rollInput);
         SetControlInput(plane, steering);
@@ -915,10 +914,11 @@ public class AutopilotController : MonoBehaviour {
     void HandleLandingTouchdown(float dt) {
         plane.SetThrottleInput(-1); // apply brakes
 
-        var yawRate = GetYawRate(plane);
-        var yawInput = CalculateYawHeading(dt, currentHeading, currentLandingHeading, yawRate);
+        var pitchInput = CalculatePitchHold(dt, 0);
+        var rollInput = CalculateRollHold(dt, 0);
+        var yawInput = CalculateYawHeading(dt, currentHeading, currentLandingHeading);
 
-        var steering = new Vector3(0, yawInput, 0);
+        var steering = new Vector3(pitchInput, yawInput, rollInput);
         SetControlInput(plane, steering);
 
         if (plane.LocalVelocity.z < 1) {
