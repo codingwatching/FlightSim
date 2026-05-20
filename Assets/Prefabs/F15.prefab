@@ -2415,6 +2415,7 @@ MonoBehaviour:
     touchdownPosition: {x: 0, y: 0, z: 0}
     touchdownDirection: {x: 0, y: 0, z: 0}
     idealGlideSlope: 5
+    approachBankPitchThreshold: 5
     approachSpeedKts: 135
     approachDistance: 1500
     approachMaxCrossTrackError: 25
