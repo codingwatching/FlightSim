@@ -130,6 +130,11 @@ public class AutopilotController : MonoBehaviour {
 
     [Serializable]
     public class NavigateModeState {
+        public enum NavigateSubMode {
+            Normal,
+            Waypoint
+        }
+
         public enum PitchControlMode {
             PitchMode,
             FlightPathMode,
@@ -137,6 +142,7 @@ public class AutopilotController : MonoBehaviour {
             ClimbRateHold
         }
 
+        public NavigateSubMode subMode;
         public PitchControlMode pitchControlMode;
         public float targetPitch;
         [Tooltip("Knots")]
@@ -146,6 +152,10 @@ public class AutopilotController : MonoBehaviour {
         [Tooltip("Feet/min")]
         public float targetClimbRateFtPerMin;
         public float targetHeading;
+
+        public List<WaypointList> waypointLists;
+        public WaypointList selectedWaypointList;
+        public WaypointState waypointState;
     }
 
     [Serializable]
@@ -451,7 +461,7 @@ public class AutopilotController : MonoBehaviour {
 
     float CalculateRollBank(float dt, float targetHeading) {
         var heading = plane.PitchYawRoll.y;
-        var turnRate = plane.Rigidbody.angularVelocity.y * Mathf.Rad2Deg;
+        var turnRate = GetYawRate(plane);
         var roll = plane.PitchYawRoll.z;
         var rollRate = GetRollRate(plane);
 
@@ -546,12 +556,52 @@ public class AutopilotController : MonoBehaviour {
         climbRateController.Reset();
     }
 
+    public void StartNavigateWaypoints(WaypointList waypoints) {
+        if (mode != AutopilotMode.Navigate) return;
+        if (waypoints == null) throw new ArgumentNullException(nameof(waypoints));
+
+        navigateMode.subMode = NavigateModeState.NavigateSubMode.Waypoint;
+        navigateMode.waypointState = waypoints.StartWaypoints(plane.Rigidbody.position);
+    }
+
+    public void StopNavigateWaypoints() {
+        if (mode != AutopilotMode.Navigate) return;
+
+        navigateMode.subMode = NavigateModeState.NavigateSubMode.Normal;
+        navigateMode.waypointState = null;
+    }
+
+    public void ToggleNavigateWaypoints(WaypointList waypoints) {
+        if (mode != AutopilotMode.Navigate) return;
+
+        if (navigateMode.subMode == NavigateModeState.NavigateSubMode.Normal) {
+            StartNavigateWaypoints(waypoints);
+        } else if (navigateMode.subMode == NavigateModeState.NavigateSubMode.Waypoint) {
+            StopNavigateWaypoints();
+        }
+    }
+
+    public List<WaypointList> GetWaypointLists() {
+        return navigateMode.waypointLists;
+    }
+
     void HandleNavigate(float dt) {
+        switch (navigateMode.subMode) {
+            case NavigateModeState.NavigateSubMode.Normal:
+                HandleNavigateNormal(dt);
+                break;
+            case NavigateModeState.NavigateSubMode.Waypoint:
+                HandleNavigateWaypoint(dt);
+                break;
+        }
+    }
+
+    void HandleNavigateNormal(float dt) {
         SetThrottleSpeedHold(dt, navigateMode.targetSpeedKts);
 
         var yawRate = GetYawRate(plane);
 
-        var pitchInput = HandleNavigatePitchControl(dt);
+        var pitchInput = CalculateNavigatePitchControl(dt);
         var rollInput = CalculateRollBank(dt, Utilities.MapAngleTo180(navigateMode.targetHeading));
         var yawInput = CalculateYawSlip(dt, 0, yawRate);
 
@@ -559,7 +609,7 @@ public class AutopilotController : MonoBehaviour {
         SetControlInput(plane, steering);
     }
 
-    float HandleNavigatePitchControl(float dt) {
+    float CalculateNavigatePitchControl(float dt) {
         float pitchInput = 0;
 
         switch (navigateMode.pitchControlMode) {
@@ -578,6 +628,38 @@ public class AutopilotController : MonoBehaviour {
         }
 
         return pitchInput;
+    }
+
+    void HandleNavigateWaypoint(float dt) {
+        var currentPosition = plane.Rigidbody.position;
+        navigateMode.waypointState.Update(currentPosition);
+
+        if (navigateMode.waypointState.Finished) {
+            StopNavigateWaypoints();
+            return;
+        }
+
+        var targetPosition = navigateMode.waypointState.CurrentPosition;
+        var error = targetPosition - currentPosition;
+        var direction = error.normalized;
+        var error2D = new Vector3(error.x, 0, error.z);
+        var direction2D = error2D.normalized;
+
+        var cross = Vector3.Cross(direction2D, Vector3.up);
+
+        navigateMode.targetHeading = Vector3.SignedAngle(Vector3.forward, direction2D, Vector3.up);
+        navigateMode.targetPitch = Vector3.SignedAngle(direction2D, direction, cross);
+
+        SetThrottleSpeedHold(dt, navigateMode.targetSpeedKts);
+
+        var yawRate = GetYawRate(plane);
+
+        var pitchInput = CalculatePitchFlightPathMode(dt, currentFlightPath.Value, navigateMode.targetPitch, currentFlightPath.Velocity);
+        var rollInput = CalculateRollBank(dt, Utilities.MapAngleTo180(navigateMode.targetHeading));
+        var yawInput = CalculateYawSlip(dt, 0, yawRate);
+
+        var steering = new Vector3(pitchInput, yawInput, rollInput);
+        SetControlInput(plane, steering);
     }
 
     void HandleTakeoff(float dt) {
@@ -759,7 +841,7 @@ public class AutopilotController : MonoBehaviour {
 
         switch (landingMode.state) {
             case LandingModeState.LandingState.Idle:
-                HandleNavigate(dt);
+                HandleNavigateNormal(dt);
                 break;
             case LandingModeState.LandingState.Align:
                 HandleLandingAlign(dt);

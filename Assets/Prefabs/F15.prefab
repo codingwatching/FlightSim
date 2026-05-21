@@ -2350,9 +2350,9 @@ MonoBehaviour:
     outputMax: 1
     integralSaturation: 0
   turnBankController:
-    proportionalGain: 2
+    proportionalGain: 5
     integralGain: 0
-    derivativeGain: 0.1
+    derivativeGain: 0.05
     outputMin: -60
     outputMax: 60
     integralSaturation: 0
@@ -2401,12 +2401,15 @@ MonoBehaviour:
     finishTakeoffMinSpeedKts: 175
     runwayAltitude: 0
   navigateMode:
+    subMode: 0
     pitchControlMode: 0
     targetPitch: 0
     targetSpeedKts: 0
     targetAltitudeFt: 0
     targetClimbRateFtPerMin: 0
     targetHeading: 0
+    waypointLists: []
+    selectedWaypointList: {fileID: 0}
   landingMode:
     state: 0
     runways:

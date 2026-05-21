@@ -17,4 +17,13 @@ public class AutopilotDropdown : MonoBehaviour {
     public void SetValue(int value) {
         dropdown.SetValueWithoutNotify(value);
     }
+
+    public void SetLabels(List<string> values) {
+        dropdown.ClearOptions();
+        dropdown.AddOptions(values);
+
+        if (values.Count > 0) {
+            dropdown.value = 0;
+        }
+    }
 }

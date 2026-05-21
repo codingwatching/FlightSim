@@ -51,6 +51,8 @@ public class AutopilotHUD : MonoBehaviour {
     AutopilotInput navigateTargetAltitudeInput;
     [SerializeField]
     AutopilotInput navigateClimbRateInput;
+    [SerializeField]
+    AutopilotDropdown navigateWaypointDropdown;
 
     [Header("Landing")]
     [SerializeField]
@@ -63,6 +65,9 @@ public class AutopilotHUD : MonoBehaviour {
     AutopilotInput landingFlareAltitudeInput;
 
     StringBuilder builder;
+
+    List<WaypointList> navigateWaypointLists;
+    int navigateWaypointIndex;
 
     void Start() {
         builder = new StringBuilder();
@@ -161,6 +166,11 @@ public class AutopilotHUD : MonoBehaviour {
         autopilot.TryLandingCapture();
     }
 
+    public void ToggleNavigateWaypoints() {
+        var waypointList = navigateWaypointLists[navigateWaypointIndex];
+        autopilot.ToggleNavigateWaypoints(waypointList);
+    }
+
     void InitInputs() {
         takeoffRotationSpeedInput.Init();
         takeoffAngleInput.Init();
@@ -227,6 +237,10 @@ public class AutopilotHUD : MonoBehaviour {
         navigateClimbRateInput.OnValueChanged += (float value) => {
             autopilot.navigateMode.targetClimbRateFtPerMin = value;
         };
+
+        navigateWaypointDropdown.OnValueChanged += (int value) => {
+            navigateWaypointIndex = value;
+        };
     }
 
     void InitTakeoffMode() {
@@ -253,6 +267,15 @@ public class AutopilotHUD : MonoBehaviour {
 
         navigateTargetAltitudeInput.SetValue(autopilot.navigateMode.targetAltitudeFt);
         navigateClimbRateInput.SetValue(autopilot.navigateMode.targetClimbRateFtPerMin);
+
+        navigateWaypointLists = autopilot.GetWaypointLists();
+        var values = new List<string>();
+
+        foreach (var waypointList in navigateWaypointLists) {
+            values.Add(waypointList.gameObject.name);
+        }
+
+        navigateWaypointDropdown.SetLabels(values);
     }
 
     void InitLandingMode() {
