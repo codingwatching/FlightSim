@@ -2331,7 +2331,7 @@ MonoBehaviour:
   climbRateController:
     proportionalGain: 0.02
     integralGain: 0.005
-    derivativeGain: 0.005
+    derivativeGain: 0.01
     outputMin: -15
     outputMax: 15
     integralSaturation: 3000
