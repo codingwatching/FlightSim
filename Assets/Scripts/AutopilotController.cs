@@ -12,6 +12,120 @@ public class AutopilotController : MonoBehaviour {
         Navigate,
     }
 
+    [Serializable]
+    public class TakeoffModeState {
+        public enum TakeoffState {
+            Idle,
+            StartTakeoff,
+            Rotate,
+            FinishTakeoff
+        }
+
+        public TakeoffState state;
+        [Tooltip("Knots")]
+        public float rotationSpeedKts;
+        public float rotationAngle;
+        [Tooltip("Knots")]
+        public float takeoffTargetSpeedKts;
+        [Tooltip("Feet/min")]
+        public float finishTakeoffClimbRateFtPerMin;
+        [Tooltip("Feet Above Ground Level (runway)")]
+        public float finishTakeoffMinFtAGL;
+        [Tooltip("Knots")]
+        public float finishTakeoffMinSpeedKts;
+
+        public float runwayAltitude;
+    }
+
+    [Serializable]
+    public class NavigateModeState {
+        public enum NavigateSubMode {
+            Normal,
+            Waypoint
+        }
+
+        public enum PitchControlMode {
+            PitchMode,
+            FlightPathMode,
+            AltitudeHoldMode,
+            ClimbRateHold
+        }
+
+        public NavigateSubMode subMode;
+        public PitchControlMode pitchControlMode;
+        public float targetPitch;
+        [Tooltip("Knots")]
+        public float targetSpeedKts;
+        [Tooltip("Feet")]
+        public float targetAltitudeFt;
+        [Tooltip("Feet/min")]
+        public float targetClimbRateFtPerMin;
+        public float targetHeading;
+
+        public List<WaypointList> waypointLists;
+        public WaypointList selectedWaypointList;
+        public WaypointState waypointState;
+    }
+
+    [Serializable]
+    public class LandingModeState {
+        public enum LandingState {
+            Idle,
+            Align,
+            Approach,
+            Flare,
+            Touchdown
+        }
+
+        public enum LandingCaptureFailure {
+            None,
+            NoRunwaysError,
+            AltitudeError,
+            DistanceError,
+            AngleError,
+            GlideSlopeError
+        }
+
+        public LandingState state;
+        public List<Runway> runways;
+        public Runway selectedRunway;
+        public Vector3 touchdownPosition;
+        public Vector3 touchdownDirection;
+
+        public float idealGlideSlope;
+        public float approachSpeedKts;
+        public float approachDistance;
+        public float approachMaxCrossTrackError;
+        public float approachMinGlideSlope;
+        public float approachMaxGlideSlope;
+        public float approachMaxAngle;
+        public float flareDescentStartFtPerMin;
+        public float flareDescentEndFtPerMin;
+        public float flareStartAltitudeFt;
+        public float flareEndAltitudeFt;
+
+        public float captureMinDistance;
+        public float captureMaxDistance;
+        public float captureMaxAngle;
+        public float captureMinGlideSlope;
+        public float captureMaxGlideSlope;
+
+        public float abortApproachMinGlideSlope;
+        public float abortApproachMaxGlideSlope;
+        public float abortApproachMaxAngle;
+        public float abortApproachMaxCrossTrackError;
+        public float abortTouchdownMaxAngle;
+    }
+
+    public struct CaptureResult {
+        public bool valid;
+        public float distance;
+        public LandingModeState.LandingCaptureFailure failReason;
+        public float failMinValue;
+        public float failMaxValue;
+        public float failValue;
+    }
+
     [SerializeField]
     Plane plane;
     [SerializeField]
@@ -20,6 +134,7 @@ public class AutopilotController : MonoBehaviour {
     float deadzone;
     [SerializeField]
     float maxRoll;
+    public float bankPitchThreshold;
     [SerializeField]
     PIDController pitchHoldController;
     [SerializeField]
@@ -100,122 +215,6 @@ public class AutopilotController : MonoBehaviour {
     float currentLandingHeading;
     float currentGlideSlope;
     float currentLandingAngle;
-
-    [Serializable]
-    public class TakeoffModeState {
-        public enum TakeoffState {
-            Idle,
-            StartTakeoff,
-            Rotate,
-            FinishTakeoff
-        }
-
-        public TakeoffState state;
-        [Tooltip("Knots")]
-        public float rotationSpeedKts;
-        public float rotationAngle;
-        [Tooltip("Knots")]
-        public float takeoffTargetSpeedKts;
-        [Tooltip("Feet/min")]
-        public float finishTakeoffClimbRateFtPerMin;
-        [Tooltip("Feet Above Ground Level (runway)")]
-        public float finishTakeoffMinFtAGL;
-        [Tooltip("Knots")]
-        public float finishTakeoffMinSpeedKts;
-
-        public float runwayAltitude;
-    }
-
-    [Serializable]
-    public class NavigateModeState {
-        public enum NavigateSubMode {
-            Normal,
-            Waypoint
-        }
-
-        public enum PitchControlMode {
-            PitchMode,
-            FlightPathMode,
-            AltitudeHoldMode,
-            ClimbRateHold
-        }
-
-        public NavigateSubMode subMode;
-        public PitchControlMode pitchControlMode;
-        public float bankPitchThreshold;
-        public float targetPitch;
-        [Tooltip("Knots")]
-        public float targetSpeedKts;
-        [Tooltip("Feet")]
-        public float targetAltitudeFt;
-        [Tooltip("Feet/min")]
-        public float targetClimbRateFtPerMin;
-        public float targetHeading;
-
-        public List<WaypointList> waypointLists;
-        public WaypointList selectedWaypointList;
-        public WaypointState waypointState;
-    }
-
-    [Serializable]
-    public class LandingModeState {
-        public enum LandingState {
-            Idle,
-            Align,
-            Approach,
-            Flare,
-            Touchdown
-        }
-
-        public enum LandingCaptureFailure {
-            None,
-            NoRunwaysError,
-            AltitudeError,
-            DistanceError,
-            AngleError,
-            GlideSlopeError
-        }
-
-        public LandingState state;
-        public List<Runway> runways;
-        public Runway selectedRunway;
-        public Vector3 touchdownPosition;
-        public Vector3 touchdownDirection;
-
-        public float idealGlideSlope;
-        public float approachBankPitchThreshold;
-        public float approachSpeedKts;
-        public float approachDistance;
-        public float approachMaxCrossTrackError;
-        public float approachMinGlideSlope;
-        public float approachMaxGlideSlope;
-        public float approachMaxAngle;
-        public float flareDescentStartFtPerMin;
-        public float flareDescentEndFtPerMin;
-        public float flareStartAltitudeFt;
-        public float flareEndAltitudeFt;
-
-        public float captureMinDistance;
-        public float captureMaxDistance;
-        public float captureMaxAngle;
-        public float captureMinGlideSlope;
-        public float captureMaxGlideSlope;
-
-        public float abortApproachMinGlideSlope;
-        public float abortApproachMaxGlideSlope;
-        public float abortApproachMaxAngle;
-        public float abortApproachMaxCrossTrackError;
-        public float abortTouchdownMaxAngle;
-    }
-
-    public struct CaptureResult {
-        public bool valid;
-        public float distance;
-        public LandingModeState.LandingCaptureFailure failReason;
-        public float failMinValue;
-        public float failMaxValue;
-        public float failValue;
-    }
 
     public Plane Plane {
         get {
@@ -382,7 +381,7 @@ public class AutopilotController : MonoBehaviour {
 
         // apply turn only if pitch is within a safe threshold
         var pitch = plane.PitchYawRoll.x;
-        applyTurn = (Mathf.Abs(targetPitch - pitch) < navigateMode.bankPitchThreshold);
+        applyTurn = (Mathf.Abs(targetPitch - pitch) < bankPitchThreshold);
 
         return CalculatePitchHold(dt, targetPitch);
     }
@@ -433,7 +432,7 @@ public class AutopilotController : MonoBehaviour {
     /// <returns>Joystick pitch command</returns>
     float CalculateNavigateFlightPathMode(float dt, float targetFlightPath, out bool applyTurn) {
         currentTargetFlightPath = targetFlightPath;
-        applyTurn = (Mathf.Abs(targetFlightPath - currentFlightPath.Value) < navigateMode.bankPitchThreshold);
+        applyTurn = (Mathf.Abs(targetFlightPath - currentFlightPath.Value) < bankPitchThreshold);
 
         // increase pitch strength when rolled
         var effectiveRoll = Mathf.Clamp(plane.PitchYawRoll.z, -maxRoll, maxRoll);
@@ -928,7 +927,7 @@ public class AutopilotController : MonoBehaviour {
         return false;
     }
 
-    void SteerLandingApproach(float dt, float bankPitchThreshold) {
+    void SteerLandingApproach(float dt) {
         var pitchRate = GetPitchRate(plane);
         var yawRate = GetYawRate(plane);
 
@@ -952,7 +951,7 @@ public class AutopilotController : MonoBehaviour {
 
     void HandleLandingAlign(float dt) {
         SetThrottleSpeedHold(dt, landingMode.approachSpeedKts);
-        SteerLandingApproach(dt, landingMode.approachBankPitchThreshold);
+        SteerLandingApproach(dt);
 
         bool crossTrackCheck = (Mathf.Abs(currentLandingCrossTrack.Value) < landingMode.approachMaxCrossTrackError);
         bool glideSlopeCheck = (currentGlideSlope > landingMode.approachMinGlideSlope) && (currentGlideSlope < landingMode.approachMaxGlideSlope);
@@ -967,7 +966,7 @@ public class AutopilotController : MonoBehaviour {
 
     void HandleLandingApproach(float dt) {
         SetThrottleSpeedHold(dt, landingMode.approachSpeedKts);
-        SteerLandingApproach(dt, landingMode.approachBankPitchThreshold);
+        SteerLandingApproach(dt);
 
         if (!plane.FlapsDeployed) {
             // deploy flaps and landing gear;
