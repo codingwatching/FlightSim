@@ -2319,8 +2319,6 @@ MonoBehaviour:
   plane: {fileID: 1030071069971577036}
   mode: 0
   deadzone: 0.01
-  steeringPitchMaxHeadingError: 15
-  maxRoll: 60
   pitchHoldController:
     proportionalGain: 0.1
     integralGain: 0.05
@@ -2403,6 +2401,7 @@ MonoBehaviour:
   navigateMode:
     subMode: 0
     pitchControlMode: 0
+    bankPitchThreshold: 5
     targetPitch: 0
     targetSpeedKts: 0
     targetAltitudeFt: 0
