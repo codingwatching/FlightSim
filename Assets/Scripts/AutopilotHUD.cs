@@ -241,6 +241,22 @@ public class AutopilotHUD : MonoBehaviour {
         navigateWaypointDropdown.OnValueChanged += (int value) => {
             navigateWaypointIndex = value;
         };
+
+        landingSpeedInput.OnValueChanged += (float value) => {
+            autopilot.landingMode.approachSpeedKts = value;
+        };
+
+        landingGlideSlopeInput.OnValueChanged += (float value) => {
+            autopilot.landingMode.idealGlideSlope = value;
+        };
+
+        landingDescentRateInput.OnValueChanged += (float value) => {
+            autopilot.landingMode.flareDescentStartFtPerMin = value;
+        };
+
+        landingFlareAltitudeInput.OnValueChanged += (float value) => {
+            autopilot.landingMode.flareStartAltitudeFt = value;
+        };
     }
 
     void InitTakeoffMode() {

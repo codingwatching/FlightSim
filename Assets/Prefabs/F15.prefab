@@ -2319,6 +2319,8 @@ MonoBehaviour:
   plane: {fileID: 1030071069971577036}
   mode: 0
   deadzone: 0.01
+  maxRoll: 60
+  bankPitchThreshold: 5
   pitchHoldController:
     proportionalGain: 0.1
     integralGain: 0.05
@@ -2401,7 +2403,6 @@ MonoBehaviour:
   navigateMode:
     subMode: 0
     pitchControlMode: 0
-    bankPitchThreshold: 5
     targetPitch: 0
     targetSpeedKts: 0
     targetAltitudeFt: 0
@@ -2417,7 +2418,6 @@ MonoBehaviour:
     touchdownPosition: {x: 0, y: 0, z: 0}
     touchdownDirection: {x: 0, y: 0, z: 0}
     idealGlideSlope: 5
-    approachBankPitchThreshold: 5
     approachSpeedKts: 135
     approachDistance: 1500
     approachMaxCrossTrackError: 25
